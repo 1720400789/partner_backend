@@ -2,6 +2,9 @@ server:
   port: 8080
   servlet:
     context-path: /api #后台配置表现层的服务根路径
+    session:
+      cookie:
+        domain: localhost
 spring:
   application:
     name: user-center
@@ -17,6 +20,12 @@ spring:
   #session-timeout是session的持续时间，86400表示一天
   session:
     timeout: 86400
+    store-type: redis #表示从redis读写session store-type默认为none表示存储在服务器内存中
+  #redis配置
+  redis:
+    port: 6379 #端口
+    host: localhost
+    database: 0 #库号
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false

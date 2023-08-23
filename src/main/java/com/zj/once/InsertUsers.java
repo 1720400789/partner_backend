@@ -1,31 +1,27 @@
-package com.zj;
+package com.zj.once;
+import java.util.Date;
 
+import com.zj.mapper.UserMapper;
 import com.zj.model.domain.User;
-import com.zj.service.UserService;
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
 
-@SpringBootTest(classes = UserCenterApplication.class)
-class UserCenterApplicationTests {
+//@Component
+public class InsertUsers {
+//    @Resource
+    private UserMapper userMapper;
 
-    @Resource
-    private UserService userService;
-
-    @Test
-    void contextLoads() {
-    }
-
-    @Test
+    /**
+     * 批量插入数据
+     */
+//    @Scheduled()
     public void doInsertUsers(){
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
-        final int INSERT_NUM = 1000;
-        List<User> userList = new ArrayList<>();
+        final int INSERT_NUM = 10000000;
         for(int i = 0; i < INSERT_NUM; i ++){
             User user = new User();
             user.setUsername("假zj");
@@ -40,10 +36,13 @@ class UserCenterApplicationTests {
             user.setUserRole(0);
             user.setPlanetCode("1212");
             user.setTags("[]");
-            userList.add(user);
+            userMapper.insert(user);
         }
-        userService.saveBatch(userList, 10);
         stopWatch.stop();
         System.out.println(stopWatch.getTotalTimeMillis());
     }
+
+//    public static void main(String[] args) {
+//
+//    }
 }

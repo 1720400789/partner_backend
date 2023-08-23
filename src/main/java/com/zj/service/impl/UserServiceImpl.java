@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.zj.common.ErrorCode;
+import com.zj.constant.Userconstant;
 import com.zj.exception.BussinessException;
 import com.zj.model.domain.User;
 import com.zj.mapper.UserMapper;
@@ -25,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.zj.constant.Userconstant.ADMIN_ROLE;
 import static com.zj.constant.Userconstant.USER_LOGIN_STATE;
 
 /**
@@ -136,6 +138,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         //这里我们定义一个脱敏后的实体类，不封装用户密码等敏感信息和无用信息
         User safetyUser = getSafetyUser(user);
         //4.记录用户的登录态
+        //传入当前服务器的session中，这样做有缺陷，就是如果用户在第一台服务器（如本机的8080端口）上登录，在第二台服务器（例本机8081端口）获取登录信息,
+        //则是获取不到的，因为session对话只存在于参与对话的那个服务器
+        //解决方法：将登录后的用户信息存入公共的数据域，如缓存中间件（redis）、数据库等
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
 
         return safetyUser;
@@ -178,6 +183,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         safetyUser.setUserRole(originUser.getUserRole());
         safetyUser.setPlanetCode(originUser.getPlanetCode());
         safetyUser.setTags(originUser.getTags());
+        safetyUser.setProfile(originUser.getProfile());
 
         return safetyUser;
     }
@@ -220,6 +226,50 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }).map(this::getSafetyUser).collect(Collectors.toList());//遍历过滤的结果然后saft一遍
     }
 
+    /**
+     *
+     * @param user
+     * @param loginUser
+     * @return
+     */
+    @Override
+    public int updateUser(User user, User loginUser) {
+        long userId = user.getId();
+        if(userId <= 0){//如果更新的这个用户的id有误则抛出异常
+            throw new BussinessException(ErrorCode.PARAMS_ERROR);
+        }
+        //仅管理员和自己可修改
+        //如果是管理员，则允许更新任何用户
+        //如果不是管理员，则只允许更新自己的内容
+        if(!isAdmin(loginUser) && userId != loginUser.getId()){//如果不是管理员且不是自己修改信息则抛出异常
+            throw new BussinessException(ErrorCode.NO_AUTH);
+        }
+        //如果要更新的用户不存在则抛出异常
+        User oldUser = userMapper.selectById(userId);
+        if(oldUser == null){
+            throw new BussinessException(ErrorCode.NULL_ERROR);
+        }
+        //满足条件则更新
+        return userMapper.updateById(user);
+    }
+
+    /**
+     * 获取当前登录的用户信息
+     * @param request
+     * @return
+     */
+    @Override
+    public User getLoginUser(HttpServletRequest request) {
+        if(request == null) {
+            return null;
+        }
+        Object loginUser = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if(loginUser == null) {
+            throw new BussinessException(ErrorCode.NO_AUTH);
+        }
+        return (User) loginUser;
+    }
+
     //@Deprecated注释标识该方法过期不建议使用
     @Deprecated
     //修饰为private方法，防止外部调用
@@ -235,6 +285,32 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         List<User> userList = userMapper.selectList(queryWrapper);
         return userList.stream().map(this::getSafetyUser).collect(Collectors.toList());
+    }
+
+    /**
+     * 鉴权方法
+     * @param request
+     * @return
+     */
+    public boolean isAdmin(HttpServletRequest request){
+        //1.鉴权，仅管理员可以调用
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) userObj;
+        if(user == null || user.getUserRole() != ADMIN_ROLE){
+            return false;
+        }
+        return true;
+    }
+
+
+    /**
+     * 鉴权方法
+     * @param loginUser
+     * @return
+     */
+    @Override
+    public boolean isAdmin(User loginUser){
+        return loginUser != null && loginUser.getUserRole() == Userconstant.ADMIN_ROLE;
     }
 }
 
