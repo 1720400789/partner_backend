@@ -2,9 +2,9 @@ spring:
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://192.168.191.135:3306/user_center?createDatabaseIfNotExist=true&useSSL=false
-      username: root
-      password: 6y7u8i9o@cn
+      url: jdbc:mysql:?createDatabaseIfNotExist=true&useSSL=false
+      username: 
+      password: 
   #session-timeout是session的持续时间，86400表示一天
   session:
     timeout: 86400
